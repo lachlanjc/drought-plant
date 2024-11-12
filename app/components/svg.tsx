@@ -77,7 +77,7 @@ export default function Component({
         </g>
       </svg>
 
-      <div className="w-full flex gap-2 justify-center items-center">
+      <div className="mt-3 w-full flex flex-col md:flex-row gap-1 justify-center items-center">
         <Slider
           value={[waterLevel]}
           onValueChange={(value) => setWaterLevel(value[0])}
@@ -87,7 +87,7 @@ export default function Component({
             width: "min(18rem, 100%)",
           }}
         />
-        <span className="tabular-nums w-[9.5ch] text-right">
+        <span className="tabular-nums w-[9.5ch] text-sm text-center md:text-right">
           {waterLevel.toFixed(0)}% of avg
         </span>
       </div>
