@@ -37,9 +37,10 @@ export default async function Home() {
     <div className="h-[80vh] relative">
       <Plant initialWaterLevel={percentOfAvg * 100} />
       <p className="text-center">
-        {totalPrecip.toFixed(1)} mm of rain has fallen in the last 30 days. This
-        is {(percentOfAvg * 100).toFixed(0)}% of the expected rainfall for this
-        time of year ({(expectedPrecip * 10).toFixed(1)} mm).
+        {totalPrecip.toFixed(1)}mm of rain has fallen in the last two months.
+        <br />
+        This is {(percentOfAvg * 100).toFixed(0)}% of the expected rainfall for
+        this time of year ({(expectedPrecip * 10).toFixed(1)}mm).
       </p>
       <Chart data={historical} />
     </div>
