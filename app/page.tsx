@@ -34,7 +34,7 @@ export default async function Home() {
   const percentOfAvg = totalPrecip / (expectedPrecip * 10);
 
   return (
-    <div className="h-[80vh]">
+    <div className="h-[80vh] relative">
       <Plant initialWaterLevel={percentOfAvg * 100} />
       <p className="text-center">
         {totalPrecip.toFixed(1)} mm of rain has fallen in the last 30 days. This
