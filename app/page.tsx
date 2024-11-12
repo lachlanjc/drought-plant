@@ -1,52 +1,40 @@
-import { getHistoricalPrecip } from "./api/precip";
+import { getHistoricalPrecip, AVG_PRECIP_BY_MONTH } from "./api/precip";
 import { Chart } from "./components/chart";
 import Plant from "./components/svg";
-
-// in CM
-const AVG_PRECIP_BY_MONTH = {
-  Jan: 10.4902,
-  Feb: 8.001,
-  Mar: 11.0998,
-  Apr: 10.8712,
-  May: 11.9126,
-  Jun: 9.7536,
-  Jul: 11.7348,
-  Aug: 10.7188,
-  Sep: 10.7442,
-  Oct: 9.779,
-  Nov: 11.0744,
-  Dec: 10.033,
-};
 
 export const revalidate = 3600; // invalidate every hour
 
 export default async function Home() {
-  const historical = await getHistoricalPrecip();
-  const totalPrecip = historical.reduce((acc, { precip }) => acc + precip, 0);
+  const data = await getHistoricalPrecip();
+  const totalPrecip = data.reduce((acc, { precip }) => acc + precip, 0);
+
   const month = new Date();
   const thisMonthAbbrev = month.toLocaleDateString("en-US", { month: "short" });
   month.setMonth(month.getMonth() - 1);
-  const lastMonthAbbrev = month.toLocaleDateString("en-US", { month: "short" });
-  const expectedPrecip =
+  // const lastMonthAbbrev = month.toLocaleDateString("en-US", { month: "short" });
+  const avgPrecip =
     // @ts-expect-error TS doesn't know months
-    AVG_PRECIP_BY_MONTH[thisMonthAbbrev] + AVG_PRECIP_BY_MONTH[lastMonthAbbrev];
+    AVG_PRECIP_BY_MONTH[thisMonthAbbrev]; // + AVG_PRECIP_BY_MONTH[lastMonthAbbrev];
+  // data.at(-1)?.avg || 0;
   // Convert cm to mm
-  const percentOfAvg = totalPrecip / (expectedPrecip * 10);
+  const percentFromAvg = (totalPrecip - avgPrecip) / avgPrecip;
 
   return (
-    <div className="h-screen relative flex flex-col items-center gap-6">
-      <Plant initialWaterLevel={percentOfAvg * 100} />
-      <p className="text-center font-serif text-lg text-stone-600 text-balance px-6">
-        {totalPrecip.toFixed(1)}mm of rain has fallen in the last two months in
-        NYC.
-        <br />
-        This is{" "}
-        <strong className="text-stone-800 font-semibold">
-          {(percentOfAvg * 100).toFixed(0)}% of the expected rainfall
-        </strong>{" "}
-        for this time of year ({(expectedPrecip * 10).toFixed(1)}mm).
+    <div className="h-screen relative flex flex-col items-center gap-6 text-[hsl(43_26%_48%)]">
+      <span className="absolute top-8 left-1/2 -translate-x-1/2  border-2 border-current rounded-full px-4 py-2 font-bold">
+        New York City
+      </span>
+      <Plant initialWaterLevel={100 + percentFromAvg * 100} />
+      <p className="text-center text-lg text-balance px-6">
+        {totalPrecip.toFixed(2)}cm of rain in the last month, vs{" "}
+        {avgPrecip.toFixed(2)}cm avg
       </p>
-      <Chart data={historical} />
+      <p className="text-center text-4xl px-6 -mt-5">
+        <strong className="text-[hsl(43_26%_24%)] font-semibold">
+          {(totalPrecip - avgPrecip).toFixed(2)}cm
+        </strong>
+      </p>
+      <Chart data={data} />
     </div>
   );
 }

@@ -24,7 +24,13 @@ export default function Component({
 
   return (
     <>
-      <svg width="600" height="800" viewBox="0 0 300 400" className="h-[75vh]">
+      <svg
+        width="600"
+        height="800"
+        viewBox="0 0 300 400"
+        className="w-auto flex-shrink-0"
+        style={{ height: "min(70vh, 100vh - 400px)" }}
+      >
         {/* Pot */}
         <path
           d="M75 361.25C75 411.25 225 411.25 225 361.25L240 286.25C240 271.25 60 271.25 60 286.25L75 361.25Z"
@@ -71,18 +77,19 @@ export default function Component({
         </g>
       </svg>
 
-      <div className="mt-8 w-64">
+      <div className="w-full flex gap-2 justify-center items-center">
         <Slider
           value={[waterLevel]}
           onValueChange={(value) => setWaterLevel(value[0])}
           max={100}
           step={1}
-          className="w-full"
           style={{
-            // @ts-expect-error custom property
-            "--primary": "10.06deg 75.55% 55.1%",
+            width: "min(18rem, 100%)",
           }}
         />
+        <span className="tabular-nums w-[9.5ch] text-right">
+          {waterLevel.toFixed(0)}% of avg
+        </span>
       </div>
     </>
   );
