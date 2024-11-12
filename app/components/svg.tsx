@@ -23,8 +23,8 @@ export default function Component({
   const stemCurve = waterLevel < 50 ? (50 - waterLevel) * 0.5 : 0;
 
   return (
-    <div className="flex flex-col h-[75vh] gap-6 items-center">
-      <svg width="600" height="800" viewBox="0 0 300 400">
+    <>
+      <svg width="600" height="800" viewBox="0 0 300 400" className="h-[75vh]">
         {/* Pot */}
         <path
           d="M75 361.25C75 411.25 225 411.25 225 361.25L240 286.25C240 271.25 60 271.25 60 286.25L75 361.25Z"
@@ -37,34 +37,36 @@ export default function Component({
 
         {/* Stem */}
         <path
-          d={`M150 300 Q${150 + stemCurve} ${300 - stemHeight / 2} 150 ${300 - stemHeight}`}
+          d={`M150 290 Q${150 + stemCurve} ${290 - stemHeight / 2} 150 ${290 - stemHeight}`}
           stroke={stemColor}
-          strokeWidth="10"
+          strokeWidth={8}
+          strokeLinecap="square"
           fill="none"
-          style={{ transition: "all 0.5s ease-in-out" }}
+          style={{ transition: "all 0.375s ease-in-out" }}
         />
 
         {/* Monstera Leaves */}
         <g
-          transform={`translate(150, ${300 - stemHeight}) scale(${leafScale})`}
-          style={{ transition: "all 0.5s ease-in-out" }}
+          transform={`translate(150, ${290 - stemHeight}) scale(${leafScale})`}
+          style={{ transition: "all 0.375s ease-in-out" }}
         >
           {/* Leaf 1 */}
           <path
             d="M0 0 C-30 -30, -60 -45, -90 -30 C-60 -60, -30 -75, 0 -60 C30 -75, 60 -60, 90 -30 C60 -45, 30 -30, 0 0"
             fill={leafColor}
+            opacity={0.75}
           />
           {/* Leaf 2 */}
           <path
             d="M30 -20 C0 -50, -30 -65, -60 -50 C-30 -80, 0 -95, 30 -80 C60 -95, 90 -80, 120 -50 C90 -65, 60 -50, 30 -20"
             fill={leafColor}
-            transform="rotate(45)"
+            transform="scale(0.75) rotate(35)"
           />
           {/* Leaf 3 */}
           <path
             d="M-30 -20 C0 -50, 30 -65, 60 -50 C30 -80, 0 -95, -30 -80 C-60 -95, -90 -80, -120 -50 C-90 -65, -60 -50, -30 -20"
             fill={leafColor}
-            transform="rotate(-45)"
+            transform="scale(0.75) rotate(-35)"
           />
         </g>
       </svg>
@@ -82,6 +84,6 @@ export default function Component({
           }}
         />
       </div>
-    </div>
+    </>
   );
 }

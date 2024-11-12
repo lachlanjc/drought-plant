@@ -22,8 +22,8 @@ const chartConfig = {
 
 export function Chart({ data }: { data: HistoricalRainfall }) {
   return (
-    <ChartContainer config={chartConfig} className="h-[200px] w-full">
-      <BarChart accessibilityLayer data={data}>
+    <ChartContainer config={chartConfig} className="h-[200px] pr-6 w-full">
+      <BarChart accessibilityLayer data={data} margin={{ left: 0, right: 0 }}>
         <CartesianGrid horizontal={false} />
         <Bar dataKey="precip" fill="var(--color-precip)" radius={4} />
         {/* <Bar dataKey="mobile" fill="var(--color-mobile)" radius={4} /> */}

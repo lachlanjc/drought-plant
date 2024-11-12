@@ -34,13 +34,17 @@ export default async function Home() {
   const percentOfAvg = totalPrecip / (expectedPrecip * 10);
 
   return (
-    <div className="h-[80vh] relative">
+    <div className="h-screen relative flex flex-col items-center gap-6">
       <Plant initialWaterLevel={percentOfAvg * 100} />
-      <p className="text-center">
-        {totalPrecip.toFixed(1)}mm of rain has fallen in the last two months.
+      <p className="text-center font-serif text-lg text-stone-600 text-balance px-6">
+        {totalPrecip.toFixed(1)}mm of rain has fallen in the last two months in
+        NYC.
         <br />
-        This is {(percentOfAvg * 100).toFixed(0)}% of the expected rainfall for
-        this time of year ({(expectedPrecip * 10).toFixed(1)}mm).
+        This is{" "}
+        <strong className="text-stone-800 font-semibold">
+          {(percentOfAvg * 100).toFixed(0)}% of the expected rainfall
+        </strong>{" "}
+        for this time of year ({(expectedPrecip * 10).toFixed(1)}mm).
       </p>
       <Chart data={historical} />
     </div>
