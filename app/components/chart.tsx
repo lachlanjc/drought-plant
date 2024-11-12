@@ -7,7 +7,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { HistoricalRainfall } from "../api/route";
+import { HistoricalPrecip } from "../api/precip";
 
 const chartConfig = {
   precip: {
@@ -20,10 +20,10 @@ const chartConfig = {
   // },
 } satisfies ChartConfig;
 
-export function Chart({ data }: { data: HistoricalRainfall }) {
+export function Chart({ data }: { data: HistoricalPrecip }) {
   return (
-    <ChartContainer config={chartConfig} className="h-[200px] pr-6 w-full">
-      <BarChart accessibilityLayer data={data} margin={{ left: 0, right: 0 }}>
+    <ChartContainer config={chartConfig} className="h-[200px] w-full">
+      <BarChart accessibilityLayer data={data}>
         <CartesianGrid horizontal={false} />
         <Bar dataKey="precip" fill="var(--color-precip)" radius={4} />
         {/* <Bar dataKey="mobile" fill="var(--color-mobile)" radius={4} /> */}
