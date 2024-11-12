@@ -1,4 +1,4 @@
-import { getHistoricalRainfall } from "./api/route";
+import { getHistoricalPrecip } from "./api/precip";
 import { Chart } from "./components/chart";
 import Plant from "./components/svg";
 
@@ -21,7 +21,7 @@ const AVG_PRECIP_BY_MONTH = {
 export const revalidate = 3600; // invalidate every hour
 
 export default async function Home() {
-  const historical = await getHistoricalRainfall();
+  const historical = await getHistoricalPrecip();
   const totalPrecip = historical.reduce((acc, { precip }) => acc + precip, 0);
   const month = new Date();
   const thisMonthAbbrev = month.toLocaleDateString("en-US", { month: "short" });
