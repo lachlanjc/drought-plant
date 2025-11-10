@@ -18,3 +18,9 @@ export const CITIES: Record<
     monthly: [49.1, 39.1, 34.9, 14.1, 6.2, 0.4, 1.3, 0.1, 4.6, 9.2, 14.5, 61.3],
   },
 };
+
+export function getCityName(city: string) {
+  return city.length <= 3
+    ? city.toUpperCase()
+    : city.charAt(0).toUpperCase() + city.slice(1);
+}
