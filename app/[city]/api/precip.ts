@@ -64,7 +64,7 @@ export async function getHistoricalPrecip(city: keyof typeof CITIES = "sf"): Pro
     totalAvg += avg;
     res.push({
       dt: dt.toISOString().split("T")[0],
-      precip: weatherData.daily.precipitationSum[i] / 10 || 0,
+      precip: weatherData.daily.precipitationSum[i] || 0,
       avg,
     });
   }

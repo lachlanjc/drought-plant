@@ -31,7 +31,9 @@ export default async function CityPage({
 }) {
   const { city } = await params;
   const cityName = getCityName(city);
-  const { data, totalAvg } = await getHistoricalPrecip(city as keyof typeof CITIES);
+  const { data, totalAvg } = await getHistoricalPrecip(
+    city as keyof typeof CITIES
+  );
   const totalPrecip = data.reduce((acc, { precip }) => acc + precip, 0);
 
   const percentFromAvg = (totalPrecip - totalAvg) / totalAvg;
