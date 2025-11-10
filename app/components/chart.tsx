@@ -14,7 +14,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { HistoricalPrecip } from "../[city]/api/precip";
+import type { HistoricalPrecip } from "../[city]/api/precip";
 
 const chartConfig = {
   precip: {
@@ -64,7 +64,7 @@ export function Chart({ data }: { data: HistoricalPrecip }) {
                   <div className="ml-auto flex items-baseline gap-0.5 font-mono font-medium tabular-nums text-foreground">
                     {Number(value).toFixed(2)}
                     <span className="font-normal text-muted-foreground">
-                      cm
+                      mm
                     </span>
                   </div>
                 </div>

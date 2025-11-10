@@ -1,4 +1,4 @@
-import { getHistoricalPrecip, AVG_PRECIP_BY_MONTH } from "./api/precip";
+import { getHistoricalPrecip } from "./api/precip";
 import { Chart } from "../components/chart";
 import Plant from "../components/shader";
 import { CITIES } from "../../lib/citites";
@@ -31,19 +31,10 @@ export default async function CityPage({
 }) {
   const { city } = await params;
   const cityName = getCityName(city);
-  const data = await getHistoricalPrecip(city as keyof typeof CITIES);
+  const { data, totalAvg } = await getHistoricalPrecip(city as keyof typeof CITIES);
   const totalPrecip = data.reduce((acc, { precip }) => acc + precip, 0);
 
-  const month = new Date();
-  const thisMonthAbbrev = month.toLocaleDateString("en-US", { month: "short" });
-  month.setMonth(month.getMonth() - 1);
-  // const lastMonthAbbrev = month.toLocaleDateString("en-US", { month: "short" });
-  const avgPrecip =
-    // @ts-expect-error TS doesn't know months
-    AVG_PRECIP_BY_MONTH[thisMonthAbbrev]; // + AVG_PRECIP_BY_MONTH[lastMonthAbbrev];
-  // data.at(-1)?.avg || 0;
-  // Convert cm to mm
-  const percentFromAvg = (totalPrecip - avgPrecip) / avgPrecip;
+  const percentFromAvg = (totalPrecip - totalAvg) / totalAvg;
 
   return (
     <div className="h-screen relative flex flex-col items-center gap-4 text-[hsl(43_26%_48%)]">
@@ -52,12 +43,12 @@ export default async function CityPage({
       </span>
       <Plant initialWaterLevel={100 + percentFromAvg * 100} />
       <p className="text-center text-lg text-balance tabular-nums px-6 -mt-2">
-        {totalPrecip.toFixed(2)}cm of rain in the last month, vs{" "}
-        {avgPrecip.toFixed(2)}cm avg
+        {totalPrecip.toFixed(2)}mm of rain in the last month, vs{" "}
+        {totalAvg.toFixed(2)}mm avg
       </p>
       <p className="text-center text-4xl px-6 -mt-3">
         <strong className="text-[hsl(43_26%_24%)] font-semibold">
-          {(totalPrecip - avgPrecip).toFixed(2)}cm
+          {(totalPrecip - totalAvg).toFixed(2)}mm
         </strong>
       </p>
       <Chart data={data} />
