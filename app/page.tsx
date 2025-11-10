@@ -1,6 +1,6 @@
 import { getHistoricalPrecip, AVG_PRECIP_BY_MONTH } from "./api/precip";
 import { Chart } from "./components/chart";
-import Plant from "./components/svg";
+import Plant from "./components/shader";
 
 export const revalidate = 3600; // invalidate every hour
 
