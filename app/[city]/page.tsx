@@ -45,12 +45,12 @@ export default async function CityPage({
       </span>
       <Plant initialWaterLevel={100 + percentFromAvg * 100} />
       <p className="text-center text-lg text-balance tabular-nums px-6 -mt-2">
-        {totalPrecip.toFixed(2)}mm of rain in the last month, vs{" "}
-        {totalAvg.toFixed(2)}mm avg
+        {(totalPrecip / 10).toFixed(2)}cm of rain in the last month, vs{" "}
+        {(totalAvg / 10).toFixed(2)}cm avg
       </p>
       <p className="text-center text-4xl px-6 -mt-3">
         <strong className="text-[hsl(43_26%_24%)] font-semibold">
-          {(totalPrecip - totalAvg).toFixed(2)}mm
+          {((totalPrecip - totalAvg) / 10).toFixed(2)}cm
         </strong>
       </p>
       <Chart data={data} />

@@ -62,9 +62,9 @@ export function Chart({ data }: { data: HistoricalPrecip }) {
                   />
                   {chartConfig[name as keyof typeof chartConfig]?.label || name}
                   <div className="ml-auto flex items-baseline gap-0.5 font-mono font-medium tabular-nums text-foreground">
-                    {Number(value).toFixed(2)}
+                    {(Number(value) / 10).toFixed(2)}
                     <span className="font-normal text-muted-foreground">
-                      mm
+                      cm
                     </span>
                   </div>
                 </div>
@@ -77,7 +77,7 @@ export function Chart({ data }: { data: HistoricalPrecip }) {
           // domain={[0, 12]}
           axisLine={false}
           tickLine={false}
-          tickFormatter={(value) => `${Math.round(value)}mm`}
+          tickFormatter={(value) => `${(value / 10).toFixed(1)}cm`}
         />
         <XAxis
           dataKey="dt"
