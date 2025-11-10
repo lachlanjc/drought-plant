@@ -14,7 +14,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { HistoricalPrecip } from "../api/precip";
+import { HistoricalPrecip } from "../[city]/api/precip";
 
 const chartConfig = {
   precip: {
@@ -74,10 +74,10 @@ export function Chart({ data }: { data: HistoricalPrecip }) {
         />
         <YAxis
           type="number"
-          domain={[0, 12]}
+          // domain={[0, 12]}
           axisLine={false}
           tickLine={false}
-          tickFormatter={(value) => `${value}mm`}
+          tickFormatter={(value) => `${Math.round(value)}mm`}
         />
         <XAxis
           dataKey="dt"

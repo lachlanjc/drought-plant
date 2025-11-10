@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "NYC Drought Plant",
-  description:
-    "A digital plant as dead/alive as New York City’s recent rainfall.",
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{

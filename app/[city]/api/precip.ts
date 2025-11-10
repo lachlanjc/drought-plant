@@ -1,4 +1,5 @@
 import { fetchWeatherApi } from "openmeteo";
+import { CITIES } from "../../../lib/citites";
 
 export type HistoricalPrecip = Array<{
   dt: string;
@@ -22,12 +23,12 @@ export const AVG_PRECIP_BY_MONTH = {
   Dec: 10.033,
 };
 
-export async function getHistoricalPrecip(): Promise<HistoricalPrecip> {
+export async function getHistoricalPrecip(city: keyof typeof CITIES = "sf"): Promise<HistoricalPrecip> {
   const oneMonthAgo = new Date();
   oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
   const params = {
-    latitude: 40.7362621,
-    longitude: -73.9911719,
+    latitude: CITIES[city][0],
+    longitude: CITIES[city][1],
     start_date: oneMonthAgo.toISOString().split("T")[0],
     end_date: new Date().toISOString().split("T")[0],
     daily: "precipitation_sum",
@@ -68,7 +69,6 @@ export async function getHistoricalPrecip(): Promise<HistoricalPrecip> {
     // get expected precip for this month
     const monthAbbrev = dt.toLocaleDateString("en-US", { month: "short" });
     const daysInMonth = new Date(dt.getFullYear(), dt.getMonth(), 0).getDate();
-    console.log(monthAbbrev, daysInMonth);
     // @ts-expect-error TS doesn't know months
     const avg = AVG_PRECIP_BY_MONTH[monthAbbrev] / daysInMonth;
     res.push({

@@ -231,7 +231,7 @@ function Leaf({ position, rotation, scale, waterLevel, index }) {
   );
 }
 
-function Stem({ start, end, waterLevel, index }) {
+function Stem({ start, end, waterLevel }) {
   const materialRef = useRef();
   const meshRef = useRef();
   const lastUpdateTimeRef = useRef(0);
@@ -265,19 +265,26 @@ function Stem({ start, end, waterLevel, index }) {
   }, [start, end, midpointOffset]);
 
   useFrame((state) => {
-    if (materialRef.current && typeof waterLevel === 'number' && !isNaN(waterLevel)) {
+    if (
+      materialRef.current &&
+      typeof waterLevel === "number" &&
+      !isNaN(waterLevel)
+    ) {
       materialRef.current.uniforms.time.value = state.clock.elapsedTime;
       materialRef.current.uniforms.waterLevel.value = waterLevel;
     }
 
     // Throttle geometry updates to every 100ms instead of every frame
     const now = state.clock.elapsedTime;
-    if (meshRef.current && currentGeometry && 
-        typeof waterLevel === 'number' && !isNaN(waterLevel) &&
-        now - lastUpdateTimeRef.current > 0.1) {
-      
+    if (
+      meshRef.current &&
+      currentGeometry &&
+      typeof waterLevel === "number" &&
+      !isNaN(waterLevel) &&
+      now - lastUpdateTimeRef.current > 0.1
+    ) {
       lastUpdateTimeRef.current = now;
-      
+
       const droop = (1.0 - waterLevel) * 0.25;
       const newEnd = new THREE.Vector3(
         end[0],
@@ -297,12 +304,15 @@ function Stem({ start, end, waterLevel, index }) {
 
       const newGeometry = new THREE.TubeGeometry(curve, 20, 0.015, 8, false);
 
-      if (meshRef.current.geometry && meshRef.current.geometry !== currentGeometry) {
+      if (
+        meshRef.current.geometry &&
+        meshRef.current.geometry !== currentGeometry
+      ) {
         meshRef.current.geometry.dispose();
       }
 
       meshRef.current.geometry = newGeometry;
-      
+
       // Dispose old geometry from state
       if (currentGeometry) {
         currentGeometry.dispose();
@@ -363,7 +373,6 @@ function Plant({ waterLevel, leafCount }) {
             start={leaf.stemStart}
             end={leaf.stemEnd}
             waterLevel={waterLevel}
-            index={i}
           />
           <Leaf
             position={leaf.position}
