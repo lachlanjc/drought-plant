@@ -13,12 +13,12 @@ import Link from "next/link";
 
 export function CitiesSelect({ currentCity }: { currentCity: string }) {
   return (
-    <div className="absolute top-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+    <div className="absolute top-8 left-8 flex flex-col gap-2 z-10">
       {Object.keys(CITIES).map((city) => (
         <Link
           href={`/${city}`}
           key={city}
-          className={`border-2 border-current rounded-full px-4 py-2 font-bold opacity-50 transition-opacity hover:opacity-75`}
+          className={`border-2 border-current rounded-full text-center px-4 py-2 font-bold opacity-50 transition-opacity hover:opacity-75`}
           aria-current={currentCity === city ? "page" : "false"}
           style={{ opacity: currentCity === city ? 1 : 0.5 }}
         >

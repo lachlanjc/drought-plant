@@ -358,14 +358,9 @@ function Stem({ start, end, waterLevel, onEndPositionUpdate, stemIndex }) {
 
       const newGeometry = new THREE.TubeGeometry(curve, 20, 0.015, 8, false);
 
-      // Notify parent of the new end position
-      if (onEndPositionUpdate) {
-        onEndPositionUpdate(droopedEnd);
-      }
-
       return newGeometry;
     },
-    [start, getDroopedEndPosition, midpointOffset, onEndPositionUpdate]
+    [start, getDroopedEndPosition, midpointOffset]
   );
 
   // Initialize geometry once
@@ -392,6 +387,14 @@ function Stem({ start, end, waterLevel, onEndPositionUpdate, stemIndex }) {
       previousWaterLevelRef.current = waterLevel;
     }
   }, [waterLevel, createGeometry]);
+
+  // Notify parent of end position after rendering
+  React.useEffect(() => {
+    if (onEndPositionUpdate) {
+      const droopedEnd = getDroopedEndPosition(waterLevel);
+      onEndPositionUpdate(droopedEnd);
+    }
+  }, [waterLevel, getDroopedEndPosition, onEndPositionUpdate]);
 
   // Cleanup on unmount
   React.useEffect(() => {
