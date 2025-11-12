@@ -202,11 +202,6 @@ const stemVertexShader = `
     vec3 pos = position;
     vWaterLevel = waterLevel;
     
-    // Gentle swaying (more when hydrated, less when wilted)
-    float sway = sin(time * 1.5 + position.y * 2.0) * 0.02 * waterLevel;
-    pos.x += sway * (position.y + 1.0);
-    pos.z += sway * 0.5 * (position.y + 1.0);
-    
     vPosition = pos;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
