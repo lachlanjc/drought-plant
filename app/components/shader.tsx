@@ -4,6 +4,13 @@ import React, { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import * as THREE from "three";
+import { Slider } from "@/components/ui/slider";
+
+// Seeded random number generator for deterministic randomness
+function seededRandom(seed: number) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
 
 const leafVertexShader = `
   uniform float waterLevel;
@@ -17,34 +24,51 @@ const leafVertexShader = `
   
   void main() {
     vUv = uv;
-    vNormal = normalize(normalMatrix * normal);
     vWaterLevel = waterLevel;
     
     vec3 pos = position;
     
-    // Wilting effect - leaves droop when dehydrated
-    float droop = (1.0 - waterLevel) * 0.5;
-    float droopAmount = droop * (1.0 - uv.y) * (1.0 - uv.y);
-    pos.y -= droopAmount;
-    pos.z -= droopAmount * 0.5;
+    // Realistic wilting - leaves droop and curl moderately
+    // uv.y = 0 is base (attached to stem), uv.y = 1 is tip
+    float wiltIntensity = 1.0 - waterLevel;
     
-    // Shrinkage when dehydrated
-    float shrink = mix(0.75, 1.0, waterLevel);
-    pos *= shrink;
+    // Droop curve - tips droop more than base
+    float wiltFactor = uv.y * uv.y;
     
-    // Gentle wave animation (more when hydrated)
-    float wave = sin(time * 2.0 + leafIndex * 1.5 + position.x * 3.0) * 0.02 * waterLevel;
+    // Moderate downward droop - leaves sag but don't collapse completely
+    pos.y -= wiltIntensity * wiltFactor * 0.8;
+    
+    // Backward curl - leaves fold back slightly when dry
+    pos.z -= wiltIntensity * wiltFactor * 0.5;
+    
+    // Sideways variation for natural randomness
+    float sideVariation = sin(leafIndex * 2.5) * wiltIntensity * wiltFactor * 0.3;
+    pos.x += sideVariation;
+    
+    // Shrinkage when dehydrated - leaves get smaller
+    // IMPORTANT: Apply shrinkage from the base (uv.y = 0) so base stays attached
+    float shrink = mix(0.8, 1.0, waterLevel);
+    pos.x *= shrink; // Width shrinks
+    pos.y *= mix(shrink, 1.0, 1.0 - uv.y); // Base stays at y=0, tips shrink
+    
+    // Gentle wave animation (only when healthy)
+    float wave = sin(time * 1.5 + leafIndex * 1.5 + position.x * 3.0) * 0.02 * waterLevel;
     pos.y += wave * uv.y;
-    pos.x += wave * 0.5 * uv.y;
+    pos.x += wave * 0.3 * uv.y;
     
-    // Edge curling when dry
-    float edgeCurl = (1.0 - waterLevel) * 0.3;
-    float distFromCenter = length(uv - 0.5);
-    if (distFromCenter > 0.3) {
-      float curlAmount = (distFromCenter - 0.3) * edgeCurl;
-      pos.z += curlAmount;
+    // Edge curling when dry - subtle crispy edges
+    float edgeCurl = wiltIntensity * 0.6;
+    float edgeDist = abs(uv.x - 0.5) * 2.0;
+    if (edgeDist > 0.5) {
+      float curlAmount = (edgeDist - 0.5) * edgeCurl;
+      pos.z += curlAmount * 0.8;
+      // Tips curl up slightly when very dry
+      if (uv.y > 0.7) {
+        pos.y += curlAmount * (uv.y - 0.7) * 1.5;
+      }
     }
     
+    vNormal = normalize(normalMatrix * normal);
     vPosition = pos;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
@@ -60,12 +84,14 @@ const leafFragmentShader = `
   varying vec3 vPosition;
   varying float vWaterLevel;
   
-  // Beautiful color palette
-  vec3 healthyGreen = vec3(0.15, 0.55, 0.25);
-  vec3 vibrantGreen = vec3(0.25, 0.65, 0.35);
-  vec3 yellowGreen = vec3(0.45, 0.65, 0.30);
-  vec3 dryYellow = vec3(0.65, 0.55, 0.25);
-  vec3 brownDry = vec3(0.45, 0.35, 0.20);
+  // DRAMATIC color palette - obvious visual changes
+  vec3 vibrantGreen = vec3(0.15, 0.75, 0.25);   // Lush, saturated green
+  vec3 healthyGreen = vec3(0.2, 0.65, 0.2);     // Normal healthy green
+  vec3 yellowGreen = vec3(0.55, 0.65, 0.2);     // Stressed yellowing
+  vec3 dryYellow = vec3(0.75, 0.65, 0.15);      // Very yellow/stressed
+  vec3 brownYellow = vec3(0.65, 0.5, 0.15);     // Turning brown
+  vec3 brownDry = vec3(0.55, 0.4, 0.2);         // Brown and dying
+  vec3 deadBrown = vec3(0.4, 0.25, 0.15);       // Dead and crispy
   
   // Create leaf veins
   float vein(vec2 uv, vec2 start, vec2 end, float width) {
@@ -77,16 +103,26 @@ const leafFragmentShader = `
   }
   
   void main() {
-    // Base color transitions
+    // REALISTIC color transitions - plants show stress early and often
     vec3 baseColor;
-    if (vWaterLevel > 0.7) {
-      baseColor = mix(healthyGreen, vibrantGreen, (vWaterLevel - 0.7) / 0.3);
-    } else if (vWaterLevel > 0.4) {
-      baseColor = mix(yellowGreen, healthyGreen, (vWaterLevel - 0.4) / 0.3);
-    } else if (vWaterLevel > 0.2) {
-      baseColor = mix(dryYellow, yellowGreen, (vWaterLevel - 0.2) / 0.2);
+    if (vWaterLevel > 0.85) {
+      // Super healthy, vibrant green
+      baseColor = mix(healthyGreen, vibrantGreen, (vWaterLevel - 0.85) / 0.15);
+    } else if (vWaterLevel > 0.65) {
+      // Starting to stress - yellowing begins
+      baseColor = mix(yellowGreen, healthyGreen, (vWaterLevel - 0.65) / 0.2);
+    } else if (vWaterLevel > 0.45) {
+      // Clearly stressed - yellow dominates
+      baseColor = mix(dryYellow, yellowGreen, (vWaterLevel - 0.45) / 0.2);
+    } else if (vWaterLevel > 0.25) {
+      // Very stressed - browning starts
+      baseColor = mix(brownYellow, dryYellow, (vWaterLevel - 0.25) / 0.2);
+    } else if (vWaterLevel > 0.1) {
+      // Dying - mostly brown
+      baseColor = mix(brownDry, brownYellow, (vWaterLevel - 0.1) / 0.15);
     } else {
-      baseColor = mix(brownDry, dryYellow, vWaterLevel / 0.2);
+      // Dead - dark brown/crispy
+      baseColor = mix(deadBrown, brownDry, vWaterLevel / 0.1);
     }
     
     // Add color variation across the leaf
@@ -109,29 +145,46 @@ const leafFragmentShader = `
       veins += vein(vUv, start, end, 0.008) * 0.7;
     }
     
-    vec3 veinColor = mix(baseColor * 0.7, baseColor * 0.5, 1.0 - vWaterLevel);
+    vec3 veinColor = mix(baseColor * 0.7, baseColor * 0.4, 1.0 - vWaterLevel);
     baseColor = mix(baseColor, veinColor, veins);
     
-    // Subsurface scattering effect
+    // Subsurface scattering effect (only when hydrated - dry leaves don't glow)
     vec3 lightDir = normalize(vec3(0.5, 1.0, 0.5));
     float backlight = max(0.0, -dot(vNormal, lightDir));
-    vec3 sss = vec3(0.3, 0.8, 0.4) * backlight * 0.5 * vWaterLevel;
+    vec3 sss = vec3(0.3, 0.8, 0.4) * backlight * 0.5 * vWaterLevel * vWaterLevel;
     baseColor += sss;
     
-    // Fresnel effect for translucency
+    // Fresnel effect for translucency (only when healthy)
     vec3 viewDir = normalize(cameraPosition - vPosition);
     float fresnel = pow(1.0 - abs(dot(viewDir, vNormal)), 3.0);
-    baseColor += fresnel * vec3(0.2, 0.4, 0.2) * vWaterLevel * 0.3;
+    baseColor += fresnel * vec3(0.2, 0.4, 0.2) * vWaterLevel * vWaterLevel * 0.3;
     
     // Lighting
     float diffuse = max(0.0, dot(vNormal, lightDir));
     baseColor *= 0.6 + 0.4 * diffuse;
     
-    // Brown spots when very dry
-    if (vWaterLevel < 0.3) {
-      float spotPattern = sin(vUv.x * 40.0 + leafIndex) * sin(vUv.y * 40.0);
-      float spots = smoothstep(0.3, 0.5, spotPattern) * (0.3 - vWaterLevel) * 3.0;
-      baseColor = mix(baseColor, brownDry * 0.6, spots);
+    // Brown spots and damage when dry - appears earlier and more dramatically
+    if (vWaterLevel < 0.6) {
+      // Multiple spot patterns for realistic leaf damage
+      float spotPattern1 = sin(vUv.x * 40.0 + leafIndex) * sin(vUv.y * 40.0);
+      float spotPattern2 = sin(vUv.x * 25.0 - leafIndex * 2.0) * sin(vUv.y * 30.0);
+      
+      // Spots intensify as water level drops
+      float spotIntensity = (0.6 - vWaterLevel) * 2.0;
+      float spots = smoothstep(0.2, 0.6, spotPattern1) * spotIntensity;
+      spots += smoothstep(0.3, 0.7, spotPattern2) * spotIntensity * 0.5;
+      
+      // Mix in dark brown spots
+      baseColor = mix(baseColor, deadBrown * 0.5, clamp(spots, 0.0, 0.7));
+    }
+    
+    // Edges turn brown first (edge burn effect)
+    if (vWaterLevel < 0.5) {
+      float edgeDist = min(abs(vUv.x - 0.5) * 2.0, abs(vUv.y - 0.5) * 2.0);
+      if (edgeDist > 0.7) {
+        float edgeBurn = (edgeDist - 0.7) * (0.5 - vWaterLevel) * 5.0;
+        baseColor = mix(baseColor, deadBrown * 0.4, clamp(edgeBurn, 0.0, 0.8));
+      }
     }
     
     gl_FragColor = vec4(baseColor, 1.0);
@@ -143,13 +196,16 @@ const stemVertexShader = `
   uniform float time;
   
   varying vec3 vPosition;
+  varying float vWaterLevel;
   
   void main() {
     vec3 pos = position;
+    vWaterLevel = waterLevel;
     
-    // Gentle swaying
-    float sway = sin(time + position.y * 2.0) * 0.02 * waterLevel;
+    // Gentle swaying (more when hydrated, less when wilted)
+    float sway = sin(time * 1.5 + position.y * 2.0) * 0.02 * waterLevel;
     pos.x += sway * (position.y + 1.0);
+    pos.z += sway * 0.5 * (position.y + 1.0);
     
     vPosition = pos;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -160,14 +216,15 @@ const stemFragmentShader = `
   uniform float waterLevel;
   
   varying vec3 vPosition;
+  varying float vWaterLevel;
   
   void main() {
     vec3 healthyStem = vec3(0.25, 0.45, 0.30);
     vec3 dryStem = vec3(0.35, 0.30, 0.20);
     
-    vec3 stemColor = mix(dryStem, healthyStem, waterLevel);
+    vec3 stemColor = mix(dryStem, healthyStem, vWaterLevel);
     
-    // Add some variation
+    // Add some variation along the length
     stemColor *= 0.9 + 0.1 * sin(vPosition.y * 20.0);
     
     gl_FragColor = vec4(stemColor, 1.0);
@@ -193,144 +250,173 @@ function createRealisticLeafGeometry() {
   return new THREE.ShapeGeometry(shape, 64);
 }
 
-function Leaf({ position, rotation, scale, waterLevel, index }) {
+function Leaf({ stemEndPosition, rotation, scale, waterLevel, index }) {
   const materialRef = useRef();
-  const groupRef = useRef();
   const geometry = useMemo(() => createRealisticLeafGeometry(), []);
 
+  // Create stable uniforms object that won't change reference
+  const uniforms = useMemo(
+    () => ({
+      waterLevel: { value: waterLevel },
+      time: { value: 0 },
+      leafIndex: { value: index },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }),
+    [index]
+  ); // Only recreate if index changes, waterLevel updated via ref
+
+  // Update water level immediately when prop changes
+  React.useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.waterLevel.value = waterLevel;
+    }
+  }, [waterLevel]);
+
+  // Update uniforms every frame
   useFrame((state) => {
     if (materialRef.current) {
       materialRef.current.uniforms.time.value = state.clock.elapsedTime;
       materialRef.current.uniforms.waterLevel.value = waterLevel;
     }
-
-    // Adjust the entire leaf group position to match the droop in the shader
-    if (groupRef.current) {
-      const droop = (1.0 - waterLevel) * 0.25;
-      groupRef.current.position.y = position[1] - droop;
-      groupRef.current.position.z = position[2] - droop * 0.25;
-    }
   });
 
   return (
-    <group ref={groupRef} position={position} rotation={rotation} scale={scale}>
+    <group position={stemEndPosition} rotation={rotation} scale={scale}>
       <mesh geometry={geometry}>
         <shaderMaterial
           ref={materialRef}
           vertexShader={leafVertexShader}
           fragmentShader={leafFragmentShader}
-          uniforms={{
-            waterLevel: { value: 0.8 },
-            time: { value: 0 },
-            leafIndex: { value: index },
-          }}
+          uniforms={uniforms}
           side={THREE.DoubleSide}
+          uniformsNeedUpdate
         />
       </mesh>
     </group>
   );
 }
 
-function Stem({ start, end, waterLevel }) {
+function Stem({ start, end, waterLevel, onEndPositionUpdate, stemIndex }) {
   const materialRef = useRef();
   const meshRef = useRef();
-  const lastUpdateTimeRef = useRef(0);
-  const [currentGeometry, setCurrentGeometry] = React.useState(null);
+  const previousWaterLevelRef = useRef(waterLevel);
+  const geometryRef = useRef(null);
 
   const midpointOffset = useMemo(
     () => ({
-      x: (Math.random() - 0.5) * 0.2,
-      z: (Math.random() - 0.5) * 0.2,
+      x: (seededRandom(stemIndex * 2 + 100) - 0.5) * 0.2,
+      z: (seededRandom(stemIndex * 2 + 101) - 0.5) * 0.2,
     }),
-    []
+    [stemIndex]
   );
 
-  React.useEffect(() => {
-    const baseCurve = new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(...start),
-      new THREE.Vector3(
-        (start[0] + end[0]) / 2 + midpointOffset.x,
-        (start[1] + end[1]) / 2,
-        (start[2] + end[2]) / 2 + midpointOffset.z
-      ),
-      new THREE.Vector3(...end)
-    );
+  // Calculate drooped end position based on water level
+  const getDroopedEndPosition = React.useCallback(
+    (water) => {
+      const droop = 1.0 - water; // Droop intensity
 
-    const geo = new THREE.TubeGeometry(baseCurve, 20, 0.015, 8, false);
-    setCurrentGeometry(geo);
+      // Stems droop more dramatically at low water levels
+      // Use quadratic curve for more dramatic effect when very dry
+      const downwardDroop = droop * droop * 0.7; // Stronger droop at low water
 
-    return () => {
-      if (geo) geo.dispose();
-    };
-  }, [start, end, midpointOffset]);
+      // CRITICAL: Never allow stems to droop below the soil level (y = 0.05)
+      const SOIL_LEVEL = 0.05;
+      const droopedY = end[1] - downwardDroop;
+      const clampedY = Math.max(droopedY, SOIL_LEVEL);
 
-  useFrame((state) => {
-    if (
-      materialRef.current &&
-      typeof waterLevel === "number" &&
-      !isNaN(waterLevel)
-    ) {
-      materialRef.current.uniforms.time.value = state.clock.elapsedTime;
-      materialRef.current.uniforms.waterLevel.value = waterLevel;
-    }
+      return [
+        end[0], // Keep horizontal position - stems stay rooted
+        clampedY, // Clamped to never go below soil
+        end[2], // Keep depth position - stems stay rooted
+      ];
+    },
+    [end]
+  );
 
-    // Throttle geometry updates to every 100ms instead of every frame
-    const now = state.clock.elapsedTime;
-    if (
-      meshRef.current &&
-      currentGeometry &&
-      typeof waterLevel === "number" &&
-      !isNaN(waterLevel) &&
-      now - lastUpdateTimeRef.current > 0.1
-    ) {
-      lastUpdateTimeRef.current = now;
+  // Create geometry based on water level (without using refs)
+  const createGeometry = React.useCallback(
+    (water) => {
+      const droopedEnd = getDroopedEndPosition(water);
 
-      const droop = (1.0 - waterLevel) * 0.25;
-      const newEnd = new THREE.Vector3(
-        end[0],
-        end[1] - droop,
-        end[2] - droop * 0.25
+      // Stems ALWAYS go up first, then droop at the top
+      // Calculate midpoint that's higher than both start and end when drooping
+      const upwardBias = 0.3; // Stems rise up from the soil
+      const midpointY = Math.max(
+        start[1] + upwardBias, // At minimum, go up from base
+        (start[1] + droopedEnd[1]) / 2 + water * 0.2 // When healthy, taller midpoint
       );
+
+      // Horizontal position interpolates normally
+      const midpointX = (start[0] + droopedEnd[0]) / 2 + midpointOffset.x;
+      const midpointZ = (start[2] + droopedEnd[2]) / 2 + midpointOffset.z;
 
       const curve = new THREE.QuadraticBezierCurve3(
         new THREE.Vector3(...start),
-        new THREE.Vector3(
-          (start[0] + newEnd.x) / 2 + midpointOffset.x,
-          (start[1] + newEnd.y) / 2,
-          (start[2] + newEnd.z) / 2 + midpointOffset.z
-        ),
-        newEnd
+        new THREE.Vector3(midpointX, midpointY, midpointZ),
+        new THREE.Vector3(...droopedEnd)
       );
 
       const newGeometry = new THREE.TubeGeometry(curve, 20, 0.015, 8, false);
 
+      // Notify parent of the new end position
+      if (onEndPositionUpdate) {
+        onEndPositionUpdate(droopedEnd);
+      }
+
+      return newGeometry;
+    },
+    [start, getDroopedEndPosition, midpointOffset, onEndPositionUpdate]
+  );
+
+  // Initialize geometry once
+  const initialGeometry = useMemo(() => {
+    return createGeometry(waterLevel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update geometry when water level changes (with threshold to avoid constant updates)
+  React.useEffect(() => {
+    const waterLevelDiff = Math.abs(waterLevel - previousWaterLevelRef.current);
+    if (waterLevelDiff > 0.01 && meshRef.current) {
+      // Dispose old geometry
       if (
-        meshRef.current.geometry &&
-        meshRef.current.geometry !== currentGeometry
+        geometryRef.current &&
+        geometryRef.current !== meshRef.current.geometry
       ) {
-        meshRef.current.geometry.dispose();
+        geometryRef.current.dispose();
       }
 
+      const newGeometry = createGeometry(waterLevel);
+      geometryRef.current = meshRef.current.geometry;
       meshRef.current.geometry = newGeometry;
+      previousWaterLevelRef.current = waterLevel;
+    }
+  }, [waterLevel, createGeometry]);
 
-      // Dispose old geometry from state
-      if (currentGeometry) {
-        currentGeometry.dispose();
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      if (geometryRef.current) {
+        geometryRef.current.dispose();
       }
-      setCurrentGeometry(newGeometry);
+    };
+  }, []);
+
+  useFrame((state) => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.time.value = state.clock.elapsedTime;
+      materialRef.current.uniforms.waterLevel.value = waterLevel;
     }
   });
 
-  if (!currentGeometry) return null;
-
   return (
-    <mesh ref={meshRef} geometry={currentGeometry}>
+    <mesh ref={meshRef} geometry={initialGeometry}>
       <shaderMaterial
         ref={materialRef}
         vertexShader={stemVertexShader}
         fragmentShader={stemFragmentShader}
         uniforms={{
-          waterLevel: { value: 0.8 },
+          waterLevel: { value: waterLevel },
           time: { value: 0 },
         }}
       />
@@ -338,12 +424,42 @@ function Stem({ start, end, waterLevel }) {
   );
 }
 
+// Component to manage a single stem-leaf pair with isolated state
+function PlantLeafPair({ leaf, waterLevel, index }) {
+  const [stemEndPosition, setStemEndPosition] = React.useState(
+    leaf.originalPosition
+  );
+
+  const handleStemEndUpdate = React.useCallback((newPos) => {
+    setStemEndPosition(newPos);
+  }, []);
+
+  return (
+    <group>
+      <Stem
+        start={leaf.stemStart}
+        end={leaf.stemEnd}
+        waterLevel={waterLevel}
+        onEndPositionUpdate={handleStemEndUpdate}
+        stemIndex={index}
+      />
+      <Leaf
+        stemEndPosition={stemEndPosition}
+        rotation={leaf.rotation}
+        scale={leaf.scale}
+        waterLevel={waterLevel}
+        index={index}
+      />
+    </group>
+  );
+}
+
 function Plant({ waterLevel, leafCount }) {
   const leaves = useMemo(() => {
     return Array.from({ length: leafCount }, (_, i) => {
-      const angle = (i / leafCount) * Math.PI * 2 + Math.random() * 0.5;
-      const height = Math.random() * 0.6 + 0.4;
-      const radius = 0.3 + Math.random() * 0.3;
+      const angle = (i / leafCount) * Math.PI * 2 + seededRandom(i * 5) * 0.5;
+      const height = seededRandom(i * 5 + 1) * 0.6 + 0.4;
+      const radius = 0.3 + seededRandom(i * 5 + 2) * 0.3;
 
       const leafPos = [
         Math.cos(angle) * radius,
@@ -352,13 +468,13 @@ function Plant({ waterLevel, leafCount }) {
       ];
 
       return {
-        position: leafPos,
+        originalPosition: leafPos,
         rotation: [
-          Math.random() * 0.3 - 0.15,
+          seededRandom(i * 5 + 3) * 0.3 - 0.15,
           angle + Math.PI / 2,
-          Math.random() * 0.2 - 0.1,
+          seededRandom(i * 5 + 4) * 0.2 - 0.1,
         ],
-        scale: 0.3 + Math.random() * 0.2,
+        scale: 0.3 + seededRandom(i * 5 + 5) * 0.2,
         stemStart: [0, 0, 0],
         stemEnd: leafPos,
       };
@@ -368,20 +484,7 @@ function Plant({ waterLevel, leafCount }) {
   return (
     <group position={[0, 0, 0]}>
       {leaves.map((leaf, i) => (
-        <group key={i}>
-          <Stem
-            start={leaf.stemStart}
-            end={leaf.stemEnd}
-            waterLevel={waterLevel}
-          />
-          <Leaf
-            position={leaf.position}
-            rotation={leaf.rotation}
-            scale={leaf.scale}
-            waterLevel={waterLevel}
-            index={i}
-          />
-        </group>
+        <PlantLeafPair key={i} leaf={leaf} waterLevel={waterLevel} index={i} />
       ))}
 
       {/* Pot */}
@@ -400,25 +503,62 @@ function Plant({ waterLevel, leafCount }) {
 }
 
 const leafCount = 8;
-export default function Component({ waterLevel }: { waterLevel: number }) {
-  // const [waterLevel, setWaterLevel] = React.useState(0.8)
-  // const [leafCount, setLeafCount] = React.useState(8)
+
+export default function Component({
+  initialWaterLevel = 80,
+}: {
+  initialWaterLevel?: number;
+}) {
+  // Normalize water level to 0-1 range
+  // Expect initialWaterLevel to be a percentage (0-100) or could be higher/lower
+  const normalizeWaterLevel = (value: number) => {
+    // Clamp between 0 and 200, then map to 0-1
+    // 0 = completely dry, 100 = normal, 200 = overwatered
+    return Math.max(0, Math.min(1, value / 100));
+  };
+
+  const [waterLevel, setWaterLevel] = React.useState(
+    normalizeWaterLevel(initialWaterLevel)
+  );
+
+  const handleSliderChange = (values: number[]) => {
+    setWaterLevel(values[0] / 100);
+  };
 
   return (
-    <Canvas
-      camera={{ position: [0, 0.5, 2], fov: 50 }}
-      className="w-full h-full"
-    >
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[5, 5, 5]} intensity={0.8} />
-      <directionalLight position={[-3, 2, -2]} intensity={0.3} />
-      <Environment preset="apartment" />
-      <Plant waterLevel={waterLevel} leafCount={leafCount} />
-      <OrbitControls
-        enablePan={false}
-        minPolarAngle={Math.PI / 4}
-        maxPolarAngle={Math.PI / 2}
-      />
-    </Canvas>
+    <div className="w-full h-full flex flex-col">
+      <Canvas
+        camera={{ position: [0, 0.5, 2], fov: 50 }}
+        className="w-full flex-1"
+      >
+        <ambientLight intensity={0.4} />
+        <directionalLight position={[5, 5, 5]} intensity={0.8} />
+        <directionalLight position={[-3, 2, -2]} intensity={0.3} />
+        <Environment preset="apartment" />
+        <Plant waterLevel={waterLevel} leafCount={leafCount} />
+        <OrbitControls
+          enablePan={false}
+          minPolarAngle={Math.PI / 4}
+          maxPolarAngle={Math.PI / 2}
+        />
+      </Canvas>
+      {/* 
+      <div className="px-8 pb-6">
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium">Water Level</label>
+          <span className="text-sm tabular-nums">
+            {Math.round(waterLevel * 100)}%
+          </span>
+        </div>
+        <Slider
+          value={[waterLevel * 100]}
+          onValueChange={handleSliderChange}
+          max={100}
+          min={0}
+          step={1}
+          className="w-full"
+        />
+      </div> */}
+    </div>
   );
 }

@@ -17,10 +17,20 @@ export const CITIES: Record<
     // prettier-ignore
     monthly: [49.1, 39.1, 34.9, 14.1, 6.2, 0.4, 1.3, 0.1, 4.6, 9.2, 14.5, 61.3],
   },
+  // btv: {
+  //   coords: [44.475683,-73.220070],
+  //   // prettier-ignore
+  //   monthly: [49.3,55.2,59.4,80.7,106.6,130.9,114.2,82.4,81.0,114.5,59.2,89.1],
+  // }
+  cdmx: {
+    coords: [19.432608, -99.133209],
+    // prettier-ignore
+    monthly: [21.3,20.7,25.8,45.4,72.5,172.8,200.6,203.0,200.6,98.4,33.3,14.3],
+  }
 };
 
 export function getCityName(city: string) {
-  return city.length <= 3
+  return city.length <= 4
     ? city.toUpperCase()
     : city.charAt(0).toUpperCase() + city.slice(1);
 }

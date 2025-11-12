@@ -1,15 +1,10 @@
 import { getHistoricalPrecip } from "./api/precip";
 import { Chart } from "../components/chart";
 import Plant from "../components/shader";
-import { CITIES } from "../../lib/citites";
+import { CITIES, getCityName } from "../../lib/citites";
+import { CitiesSelect } from "../components/cities";
 
 export const revalidate = 3600; // invalidate every hour
-
-function getCityName(city: string) {
-  return city.length <= 3
-    ? city.toUpperCase()
-    : city.charAt(0).toUpperCase() + city.slice(1);
-}
 
 export async function generateMetadata({
   params,
@@ -30,7 +25,6 @@ export default async function CityPage({
   params: Promise<{ city: string }>;
 }) {
   const { city } = await params;
-  const cityName = getCityName(city);
   const { data, totalAvg } = await getHistoricalPrecip(
     city as keyof typeof CITIES
   );
@@ -40,9 +34,7 @@ export default async function CityPage({
 
   return (
     <div className="h-screen relative flex flex-col items-center gap-4 text-[hsl(43_26%_48%)]">
-      <span className="absolute top-8 left-1/2 -translate-x-1/2 border-2 border-current rounded-full px-4 py-2 font-bold">
-        {cityName}
-      </span>
+      <CitiesSelect currentCity={city} />
       <Plant initialWaterLevel={100 + percentFromAvg * 100} />
       <p className="text-center text-lg text-balance tabular-nums px-6 -mt-2">
         {(totalPrecip / 10).toFixed(2)}cm of rain in the last month, vs{" "}
@@ -50,7 +42,7 @@ export default async function CityPage({
       </p>
       <p className="text-center text-4xl px-6 -mt-3">
         <strong className="text-[hsl(43_26%_24%)] font-semibold">
-          {((totalPrecip - totalAvg) / 10).toFixed(2)}cm
+          △ {((totalPrecip - totalAvg) / 10).toFixed(2)}cm
         </strong>
       </p>
       <Chart data={data} />
