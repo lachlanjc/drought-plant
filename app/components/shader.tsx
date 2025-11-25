@@ -28,12 +28,17 @@ const leafVertexShader = `
     
     vec3 pos = position;
     
+    // Calculate a normalized height factor based on GEOMETRY, not UVs
+    // The leaf geometry is roughly 0.0 to 1.1 in height
+    // This ensures that at pos.y = 0 (the base), the factor is EXACTLY 0.0
+    float heightFactor = clamp(position.y / 1.1, 0.0, 1.0);
+    
     // Realistic wilting - leaves droop and curl moderately
-    // uv.y = 0 is base (attached to stem), uv.y = 1 is tip
     float wiltIntensity = 1.0 - waterLevel;
     
     // Droop curve - tips droop more than base
-    float wiltFactor = uv.y * uv.y;
+    // Using heightFactor instead of uv.y guarantees base stays attached
+    float wiltFactor = heightFactor * heightFactor;
     
     // Moderate downward droop - leaves sag but don't collapse completely
     pos.y -= wiltIntensity * wiltFactor * 0.8;
@@ -46,25 +51,28 @@ const leafVertexShader = `
     pos.x += sideVariation;
     
     // Shrinkage when dehydrated - leaves get smaller
-    // IMPORTANT: Apply shrinkage from the base (uv.y = 0) so base stays attached
+    // IMPORTANT: Apply shrinkage from the base so base stays attached
     float shrink = mix(0.8, 1.0, waterLevel);
     pos.x *= shrink; // Width shrinks
-    pos.y *= mix(shrink, 1.0, 1.0 - uv.y); // Base stays at y=0, tips shrink
+    pos.y *= mix(shrink, 1.0, 1.0 - heightFactor); // Base stays at y=0, tips shrink
     
     // Gentle wave animation (only when healthy)
     float wave = sin(time * 1.5 + leafIndex * 1.5 + position.x * 3.0) * 0.02 * waterLevel;
-    pos.y += wave * uv.y;
-    pos.x += wave * 0.3 * uv.y;
+    pos.y += wave * heightFactor;
+    pos.x += wave * 0.3 * heightFactor;
     
     // Edge curling when dry - subtle crispy edges
     float edgeCurl = wiltIntensity * 0.6;
-    float edgeDist = abs(uv.x - 0.5) * 2.0;
+    // Use geometric width for edge distance too
+    float widthFactor = abs(position.x) / 0.35; // Approx width 0.35
+    float edgeDist = widthFactor; // Simple linear factor from center
+    
     if (edgeDist > 0.5) {
       float curlAmount = (edgeDist - 0.5) * edgeCurl;
       pos.z += curlAmount * 0.8;
       // Tips curl up slightly when very dry
-      if (uv.y > 0.7) {
-        pos.y += curlAmount * (uv.y - 0.7) * 1.5;
+      if (heightFactor > 0.7) {
+        pos.y += curlAmount * (heightFactor - 0.7) * 1.5;
       }
     }
     
@@ -353,9 +361,14 @@ function Stem({ start, end, waterLevel, onEndPositionUpdate, stemIndex }) {
 
       const newGeometry = new THREE.TubeGeometry(curve, 20, 0.015, 8, false);
 
+      // Notify parent of the new end position immediately when geometry is created
+      if (onEndPositionUpdate) {
+        onEndPositionUpdate(droopedEnd);
+      }
+
       return newGeometry;
     },
-    [start, getDroopedEndPosition, midpointOffset]
+    [start, getDroopedEndPosition, midpointOffset, onEndPositionUpdate]
   );
 
   // Initialize geometry once
@@ -383,13 +396,13 @@ function Stem({ start, end, waterLevel, onEndPositionUpdate, stemIndex }) {
     }
   }, [waterLevel, createGeometry]);
 
-  // Notify parent of end position after rendering
+  // Ensure initial position is set on mount
   React.useEffect(() => {
     if (onEndPositionUpdate) {
-      const droopedEnd = getDroopedEndPosition(waterLevel);
-      onEndPositionUpdate(droopedEnd);
+      onEndPositionUpdate(getDroopedEndPosition(waterLevel));
     }
-  }, [waterLevel, getDroopedEndPosition, onEndPositionUpdate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount to set initial position
 
   // Cleanup on unmount
   React.useEffect(() => {
