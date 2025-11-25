@@ -454,8 +454,13 @@ function PlantLeafPair({ leaf, waterLevel, index }) {
 
 function Plant({ waterLevel, leafCount }) {
   const leaves = useMemo(() => {
-    return Array.from({ length: leafCount }, (_, i) => {
-      const angle = (i / leafCount) * Math.PI * 2 + seededRandom(i * 5) * 0.5;
+    // If waterLevel is over 1, multiply leafCount by double the waterLevel
+    const effectiveLeafCount =
+      waterLevel > 1 ? Math.floor(leafCount * waterLevel * 2) : leafCount;
+
+    return Array.from({ length: effectiveLeafCount }, (_, i) => {
+      const angle =
+        (i / effectiveLeafCount) * Math.PI * 2 + seededRandom(i * 5) * 0.5;
       const height = seededRandom(i * 5 + 1) * 0.6 + 0.4;
       const radius = 0.3 + seededRandom(i * 5 + 2) * 0.3;
 
@@ -477,7 +482,7 @@ function Plant({ waterLevel, leafCount }) {
         stemEnd: leafPos,
       };
     });
-  }, [leafCount]);
+  }, [leafCount, waterLevel]);
 
   return (
     <group position={[0, 0, 0]}>
